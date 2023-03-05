@@ -1,6 +1,6 @@
 import pyautogui
 import cv2
-import tkinter as tk
+import tkinter
 from tkinter import messagebox
 
 # Define the colors of the Tetris blocks
@@ -21,48 +21,62 @@ region = None
 def capture_region():
     global region
 
-    # Hide the main window
+    root = tkinter.Tk()
     root.withdraw()
 
-    # Display the overlay window
-    overlay = tk.Toplevel()
-    overlay.attributes("-fullscreen", True)
-    overlay.attributes("-alpha", 0.5)
-    overlay.attributes("-topmost", True)
-    overlay.configure(bg="black")
+    messagebox.showinfo("Capture Region", "Select the region of the screen to capture")
 
-    # Add a label to the overlay window
-    label = tk.Label(overlay, text="Drag and resize the box to select the capture region", font=(
-        "Arial", 16), fg="white", bg="black")
-    label.pack(side="top", padx=10, pady=10)
+    # Capture the screen to get the screen dimensions
+    screen = pyautogui.screenshot()
 
-    # Add a canvas to the overlay window
-    canvas = tk.Canvas(overlay, bg="black", highlightthickness=0)
+    # Create a fullscreen window with no decorations
+    fullscreen = tkinter.Toplevel()
+    fullscreen.overrideredirect(True)
+    fullscreen.geometry("{0}x{1}+0+0".format(screen.width, screen.height))
+    fullscreen.focus_set()
+    fullscreen.bind("<Escape>", lambda _: fullscreen.quit())
+
+    # Create an adjustable selection overlay on the screen
+    canvas = tkinter.Canvas(fullscreen, bg="black", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
 
-    # Define the rectangle for the capture region
-    x, y, w, h = pyautogui.position()
-    rect = canvas.create_rectangle(x, y, x+w, y+h, outline="white")
+    # Create the selection rectangle
+    selection = canvas.create_rectangle(0, 0, 0, 0, outline="red")
 
-    # Define the function to update the rectangle
-    def update_rect(event):
-        nonlocal x, y, w, h
+    # Define the function to update the selection rectangle
+    def update_selection(event):
+        nonlocal selection
         x, y = canvas.canvasx(event.x), canvas.canvasy(event.y)
-        w, h = event.x - canvas.canvasx(rect), event.y - canvas.canvasy(rect)
-        canvas.coords(rect, x, y, x+w, y+h)
+        canvas.coords(selection, anchor_x, anchor_y, x, y)
 
-    # Bind the events to the canvas
-    canvas.bind("<B1-Motion>", update_rect)
-    canvas.bind("<ButtonRelease-1>", overlay.quit)
+    # Define the function to set the capture region
+    def set_region():
+        global region
+        region = (anchor_x, anchor_y, selection_x, selection_y)
+        messagebox.showinfo("Capture Region", "Capture region set successfully")
+        fullscreen.quit()
 
-    # Start the event loop for the overlay window
-    overlay.mainloop()
+    # Bind the mouse events
+    def start_selection(event):
+        nonlocal anchor_x, anchor_y
+        anchor_x, anchor_y = canvas.canvasx(event.x), canvas.canvasy(event.y)
 
-    # Show the main window
-    root.deiconify()
+        canvas.bind("<B1-Motion>", update_selection)
+        canvas.bind("<ButtonRelease-1>", end_selection)
 
-    # Set the capture region
-    region = (x, y, w, h)
+    def end_selection(event):
+        nonlocal selection_x, selection_y
+        selection_x, selection_y = canvas.coords(selection)[2:]
+
+        canvas.unbind("<B1-Motion>")
+        canvas.unbind("<ButtonRelease-1>")
+
+        set_region()
+
+    canvas.bind("<ButtonPress-1>", start_selection)
+
+    # Start the event loop
+    fullscreen.mainloop()
 
 # Define the function to process the captured image
 def process_image():
