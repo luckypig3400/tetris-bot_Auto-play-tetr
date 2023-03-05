@@ -18,8 +18,6 @@ colors = {
 region = None
 
 # Define the function to capture the screen region
-
-
 def capture_region():
     global region
 
@@ -67,8 +65,6 @@ def capture_region():
     region = (x, y, w, h)
 
 # Define the function to process the captured image
-
-
 def process_image():
     if region is None:
         messagebox.showerror("Error", "Please select a capture region first")
@@ -136,3 +132,10 @@ def process_image():
             else:
                 row += " "
         print(row)
+
+# Ask User the tetris game region at script start
+capture_region()
+
+# Loop indefinitely
+while True:
+    process_image()
